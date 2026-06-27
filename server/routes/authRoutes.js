@@ -27,10 +27,12 @@ function sanitizeDiscordUser(user = {}) {
 }
 
 function clearSessionCookie(res) {
+  const isProduction = process.env.NODE_ENV === "production";
+
   res.clearCookie(SESSION_COOKIE_NAME, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
     path: "/",
   });
 }
