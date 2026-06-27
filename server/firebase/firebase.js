@@ -1,15 +1,37 @@
+const fs = require("fs");
+const path = require("path");
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 
+function parseServiceAccountJson(rawJson) {
+  const parsed = JSON.parse(rawJson);
+
+  if (parsed.private_key) {
+    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+  }
+
+  return parsed;
+}
+
 function loadServiceAccount() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    return parseServiceAccountJson(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  }
 
-    if (parsed.private_key) {
-      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
-    }
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    const fileContent = fs.readFileSync(
+      process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+      "utf8"
+    );
 
-    return parsed;
+    return parseServiceAccountJson(fileContent);
+  }
+
+  const renderSecretPath = "/etc/secrets/serviceAccountKey.json";
+
+  if (fs.existsSync(renderSecretPath)) {
+    const fileContent = fs.readFileSync(renderSecretPath, "utf8");
+    return parseServiceAccountJson(fileContent);
   }
 
   return require("../serviceAccountKey.json");
