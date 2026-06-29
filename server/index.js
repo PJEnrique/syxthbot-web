@@ -18,6 +18,7 @@ const app = express();
 
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:5000";
 const SESSION_COOKIE_NAME = "syxth.sid";
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -32,7 +33,9 @@ app.use(
 const allowedOrigins = [
   CLIENT_URL,
   "http://localhost:5173",
+  "http://localhost:5000",
   "https://syxthbot-web.onrender.com",
+  "https://syxth-api.onrender.com",
 ].filter(Boolean);
 
 app.use(
@@ -48,7 +51,7 @@ app.use(
 
       console.warn("Blocked by CORS:", origin);
 
-      return callback(new Error(`CORS blocked origin: ${origin}`));
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -65,13 +68,13 @@ app.use(
     resave: false,
     saveUninitialized: false,
     rolling: true,
-cookie: {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
-  path: "/",
-  maxAge: 1000 * 60 * 60 * 24 * 7,
-},
+    cookie: {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
   })
 );
 
@@ -89,6 +92,28 @@ app.get("/", (req, res) => {
   res.json({
     ok: true,
     message: "SYXTH MMORPG Web API is running.",
+    environment: process.env.NODE_ENV || "development",
+  });
+});
+
+app.get("/api/debug/env", (req, res) => {
+  res.json({
+    ok: true,
+
+    nodeEnv: process.env.NODE_ENV || null,
+    clientUrl: CLIENT_URL,
+    serverUrl: SERVER_URL,
+    discordRedirectUri: process.env.DISCORD_REDIRECT_URI || null,
+
+    hasDiscordClientId: Boolean(process.env.DISCORD_CLIENT_ID),
+    hasDiscordClientSecret: Boolean(process.env.DISCORD_CLIENT_SECRET),
+    hasSessionSecret: Boolean(process.env.SESSION_SECRET),
+    hasFirebaseServiceAccountJson: Boolean(
+      process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+    ),
+
+    requestOrigin: req.headers.origin || null,
+    allowedOrigins,
   });
 });
 
@@ -105,6 +130,7 @@ app.use((req, res) => {
   res.status(404).json({
     ok: false,
     error: "Route not found.",
+    path: req.originalUrl,
   });
 });
 
@@ -118,5 +144,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`SYXTH Web API running on http://localhost:${PORT}`);
+  console.log(`SYXTH Web API running on port ${PORT}`);
 });
