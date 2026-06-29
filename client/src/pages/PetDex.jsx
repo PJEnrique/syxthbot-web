@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { PawPrint, RefreshCw } from "lucide-react";
 import DiscordEmoji from "../components/DiscordEmoji";
+import { API_URL } from "../api/api";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = `${API_URL}/api`;
 
 const PET_EMOJI_MAP = {
   baby_wolf: "<:baby_wolf:1511976609597362296>",

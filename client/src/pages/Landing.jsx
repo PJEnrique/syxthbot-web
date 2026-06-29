@@ -10,8 +10,9 @@ import {
   MessageCircle,
 } from "lucide-react";
 import DiscordEmoji from "../components/DiscordEmoji";
+import { API_URL } from "../api/api";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = `${API_URL}/api`;
 const DISCORD_INVITE_URL = "https://discord.gg/HVJ6wP5P5u";
 
 const featuredPets = [

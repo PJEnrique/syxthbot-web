@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Skull, RefreshCw, Clock, Trophy } from "lucide-react";
+import { API_URL } from "../api/api";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = `${API_URL}/api`;
 
 async function fetchBossStatus(signal) {
   const res = await fetch(`${API_BASE}/boss/status`, {

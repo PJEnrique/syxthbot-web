@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Trophy, RefreshCw } from "lucide-react";
+import { API_URL } from "../api/api";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = `${API_URL}/api`;
 
 const TYPES = [
   { id: "overall", label: "Overall" },
