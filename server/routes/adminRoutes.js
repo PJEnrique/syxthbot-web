@@ -245,6 +245,7 @@ router.get("/me", requireAuth, requireAdmin, (req, res) => {
       username: req.session.user.username || "",
       displayName: getDisplayName(req.session.user),
       avatarUrl: req.session.user.avatarUrl || "",
+      access: req.adminAccess || null,
     },
   });
 });
@@ -277,6 +278,7 @@ router.get("/overview", requireAuth, requireAdmin, async (req, res) => {
         topKiller: stats.topKiller,
 
         mode: "read_only",
+        accessMode: "discord_role",
       },
     });
   } catch (error) {
