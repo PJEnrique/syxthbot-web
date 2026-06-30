@@ -12,12 +12,20 @@ export function getStoredAuthToken() {
 export function saveStoredAuthToken(token) {
   if (typeof window === "undefined") return;
   if (!token) return;
+
   localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem("syxth-auth-event", String(Date.now()));
+
+  window.dispatchEvent(new Event("syxth-auth-changed"));
 }
 
 export function clearStoredAuthToken() {
   if (typeof window === "undefined") return;
+
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.setItem("syxth-auth-event", String(Date.now()));
+
+  window.dispatchEvent(new Event("syxth-auth-changed"));
 }
 
 export function consumeAuthTokenFromUrl() {
@@ -36,11 +44,51 @@ export function consumeAuthTokenFromUrl() {
   return token;
 }
 
+function normalizePath(path) {
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+function normalizeUrl(pathOrUrl) {
+  const value = String(pathOrUrl || "");
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  return `${API_URL}${normalizePath(value)}`;
+}
+
+function headersToObject(headers = {}) {
+  if (headers instanceof Headers) {
+    const result = {};
+
+    headers.forEach((value, key) => {
+      result[key] = value;
+    });
+
+    return result;
+  }
+
+  if (Array.isArray(headers)) {
+    const result = {};
+
+    new Headers(headers).forEach((value, key) => {
+      result[key] = value;
+    });
+
+    return result;
+  }
+
+  return {
+    ...(headers || {}),
+  };
+}
+
 export function getAuthHeaders(extraHeaders = {}) {
   const token = getStoredAuthToken();
 
   return {
-    ...extraHeaders,
+    ...headersToObject(extraHeaders),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
@@ -55,72 +103,76 @@ async function readJsonResponse(response) {
   }
 }
 
-function normalizePath(path) {
-  return path.startsWith("/") ? path : `/${path}`;
+async function apiRequest(path, options = {}) {
+  const response = await fetch(normalizeUrl(path), {
+    credentials: "include",
+    cache: "no-store",
+    ...options,
+    headers: getAuthHeaders(options.headers || {}),
+  });
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  return data;
 }
 
 export async function apiGet(path) {
-  const response = await fetch(`${API_URL}${normalizePath(path)}`, {
-    credentials: "include",
-    cache: "no-store",
-    headers: getAuthHeaders(),
+  return apiRequest(path, {
+    method: "GET",
   });
-
-  const data = await readJsonResponse(response);
-
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed.");
-  }
-
-  return data;
 }
 
 export async function apiPost(path, body = {}) {
-  const response = await fetch(`${API_URL}${normalizePath(path)}`, {
+  return apiRequest(path, {
     method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    headers: getAuthHeaders({
+    headers: {
       "Content-Type": "application/json",
-    }),
+    },
     body: JSON.stringify(body),
   });
-
-  const data = await readJsonResponse(response);
-
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed.");
-  }
-
-  return data;
 }
 
 export async function apiPatch(path, body = {}) {
-  const response = await fetch(`${API_URL}${normalizePath(path)}`, {
+  return apiRequest(path, {
     method: "PATCH",
-    credentials: "include",
-    cache: "no-store",
-    headers: getAuthHeaders({
+    headers: {
       "Content-Type": "application/json",
-    }),
+    },
     body: JSON.stringify(body),
   });
+}
 
-  const data = await readJsonResponse(response);
+export async function apiPut(path, body = {}) {
+  return apiRequest(path, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
 
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed.");
+export async function apiDelete(path, body = null) {
+  const options = {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
   }
 
-  return data;
+  return apiRequest(path, options);
 }
 
 export async function authFetch(pathOrUrl, options = {}) {
-  const url = String(pathOrUrl || "").startsWith("http")
-    ? pathOrUrl
-    : `${API_URL}${normalizePath(pathOrUrl)}`;
-
-  return fetch(url, {
+  return fetch(normalizeUrl(pathOrUrl), {
     credentials: "include",
     cache: "no-store",
     ...options,
@@ -136,7 +188,11 @@ export function getDiscordLoginUrl() {
   Mobile fallback:
   Some mobile browsers do not send the Render API session cookie
   from syxthbot-web.onrender.com to syxth-api.onrender.com.
-  This patch adds the mobile auth token automatically to API requests.
+
+  This patch automatically adds:
+  Authorization: Bearer <mobile token>
+
+  to every request going to the configured API URL.
 */
 if (typeof window !== "undefined" && !window.__syxthFetchPatched) {
   window.__syxthFetchPatched = true;

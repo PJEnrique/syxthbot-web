@@ -11,6 +11,11 @@ import {
   Skull,
   PawPrint,
   BarChart3,
+  Eye,
+  X,
+  Backpack,
+  Swords,
+  Heart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -80,6 +85,18 @@ function formatNumber(value) {
   }
 
   return number.toLocaleString();
+}
+
+function formatDate(value) {
+  if (!value) return "Not recorded";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return toDisplayText(value, "Not recorded");
+  }
+
+  return date.toLocaleString();
 }
 
 function formatClass(value) {
@@ -188,6 +205,25 @@ async function fetchTopPlayers(topType) {
   return Array.isArray(data.players) ? data.players : [];
 }
 
+async function fetchPlayerDetails(playerId) {
+  const response = await fetch(
+    `${API_URL}/api/admin/players/${encodeURIComponent(playerId)}?t=${Date.now()}`,
+    {
+      credentials: "include",
+      cache: "no-store",
+      headers: getAuthHeaders(),
+    }
+  );
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Failed to inspect player.");
+  }
+
+  return data.player || null;
+}
+
 export default function AdminPanel() {
   const [admin, setAdmin] = useState(null);
   const [overview, setOverview] = useState(null);
@@ -200,6 +236,10 @@ export default function AdminPanel() {
   const [refreshing, setRefreshing] = useState(false);
   const [topLoading, setTopLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [inspectorLoading, setInspectorLoading] = useState(false);
+  const [inspectorError, setInspectorError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -272,6 +312,28 @@ export default function AdminPanel() {
     }
   }
 
+  async function handleInspectPlayer(playerId) {
+    try {
+      setInspectorLoading(true);
+      setInspectorError("");
+      setSelectedPlayer(null);
+
+      const player = await fetchPlayerDetails(playerId);
+
+      setSelectedPlayer(player);
+    } catch (err) {
+      setInspectorError(err.message || "Failed to inspect player.");
+    } finally {
+      setInspectorLoading(false);
+    }
+  }
+
+  function closeInspector() {
+    setSelectedPlayer(null);
+    setInspectorError("");
+    setInspectorLoading(false);
+  }
+
   if (loading) {
     return (
       <section className="page">
@@ -292,7 +354,7 @@ export default function AdminPanel() {
         <div className="sectionHeader">
           <p className="eyebrow">SYXTH Control Room</p>
           <h1>Admin Panel</h1>
-          <p>This page is restricted to allowed Discord user IDs.</p>
+          <p>This page is restricted to allowed Discord admin roles.</p>
         </div>
 
         <div className="warning-box">
@@ -415,6 +477,7 @@ export default function AdminPanel() {
             player={overview?.topPowerPlayer}
             valueLabel="Power"
             value={overview?.topPowerPlayer?.power}
+            onInspect={handleInspectPlayer}
           />
 
           <LeaderCard
@@ -422,6 +485,7 @@ export default function AdminPanel() {
             player={overview?.richestPlayer}
             valueLabel="Gold"
             value={overview?.richestPlayer?.gold}
+            onInspect={handleInspectPlayer}
           />
 
           <LeaderCard
@@ -429,6 +493,7 @@ export default function AdminPanel() {
             player={overview?.topKiller}
             valueLabel="Kills"
             value={overview?.topKiller?.monsterKills}
+            onInspect={handleInspectPlayer}
           />
         </div>
       </div>
@@ -476,6 +541,7 @@ export default function AdminPanel() {
                   </th>
                   <th>Power</th>
                   <th>Gold</th>
+                  <th>Action</th>
                 </tr>
               </thead>
 
@@ -489,12 +555,23 @@ export default function AdminPanel() {
                     <td>{formatNumber(getTopValue(player, topType))}</td>
                     <td>{formatNumber(player.power)}</td>
                     <td>{formatNumber(player.gold)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="secondaryBtn smallBtn"
+                        onClick={() => handleInspectPlayer(player.id)}
+                        disabled={inspectorLoading}
+                      >
+                        <Eye size={15} />
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))}
 
                 {!topPlayers.length && (
                   <tr>
-                    <td colSpan="7">No ranked players found.</td>
+                    <td colSpan="8">No ranked players found.</td>
                   </tr>
                 )}
               </tbody>
@@ -521,6 +598,7 @@ export default function AdminPanel() {
                 <th>Kills</th>
                 <th>Pets</th>
                 <th>Inventory</th>
+                <th>Action</th>
               </tr>
             </thead>
 
@@ -536,18 +614,38 @@ export default function AdminPanel() {
                   <td>{formatNumber(player.monsterKills)}</td>
                   <td>{formatNumber(player.petCount)}</td>
                   <td>{formatNumber(player.inventoryCount)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="secondaryBtn smallBtn"
+                      onClick={() => handleInspectPlayer(player.id)}
+                      disabled={inspectorLoading}
+                    >
+                      <Eye size={15} />
+                      View
+                    </button>
+                  </td>
                 </tr>
               ))}
 
               {!players.length && (
                 <tr>
-                  <td colSpan="9">No players found.</td>
+                  <td colSpan="10">No players found.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {(inspectorLoading || inspectorError || selectedPlayer) && (
+        <PlayerInspectorModal
+          loading={inspectorLoading}
+          error={inspectorError}
+          player={selectedPlayer}
+          onClose={closeInspector}
+        />
+      )}
     </section>
   );
 }
@@ -564,7 +662,7 @@ function StatCard({ icon, title, value, text }) {
   );
 }
 
-function LeaderCard({ title, player, valueLabel, value }) {
+function LeaderCard({ title, player, valueLabel, value, onInspect }) {
   return (
     <article className="wiki-card">
       <h3>{title}</h3>
@@ -582,10 +680,226 @@ function LeaderCard({ title, player, valueLabel, value }) {
               {valueLabel}: {formatNumber(value)}
             </span>
           </div>
+
+          <button
+            type="button"
+            className="secondaryBtn smallBtn"
+            onClick={() => onInspect?.(player.id)}
+          >
+            <Eye size={15} />
+            View Details
+          </button>
         </>
       ) : (
         <p>No data yet.</p>
       )}
     </article>
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="statRow">
+      <span>{label}</span>
+      <strong>{toDisplayText(value, "Not recorded")}</strong>
+    </div>
+  );
+}
+
+function StatPill({ label, value }) {
+  return (
+    <span className="pill">
+      {label}: <strong>{formatNumber(value)}</strong>
+    </span>
+  );
+}
+
+function PlayerInspectorModal({ loading, error, player, onClose }) {
+  const equipment = player?.equipment || {};
+  const inventory = Array.isArray(player?.inventory) ? player.inventory : [];
+  const pets = Array.isArray(player?.pets) ? player.pets : [];
+
+  return (
+    <div className="admin-inspector-backdrop" role="presentation">
+      <div className="admin-inspector-modal">
+        <div className="filter-head">
+          <div>
+            <p className="eyebrow">Player Inspector</p>
+            <h2>{player ? getPlayerName(player) : "Loading Player"}</h2>
+            <p className="muted-text">
+              Read-only player profile. No database editing is enabled.
+            </p>
+          </div>
+
+          <button type="button" className="secondaryBtn smallBtn" onClick={onClose}>
+            <X size={16} />
+            Close
+          </button>
+        </div>
+
+        {loading && <div className="empty-state">Loading player details...</div>}
+
+        {error && (
+          <div className="warning-box">
+            <AlertTriangle size={18} />
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && player && (
+          <>
+            <div className="featureGrid">
+              <StatCard
+                icon={<Trophy size={22} />}
+                title="Level"
+                value={formatNumber(player.level)}
+                text="current level"
+              />
+
+              <StatCard
+                icon={<Coins size={22} />}
+                title="Gold"
+                value={formatNumber(player.gold)}
+                text="player balance"
+              />
+
+              <StatCard
+                icon={<Swords size={22} />}
+                title="Power"
+                value={formatNumber(player.power)}
+                text="combat rating"
+              />
+
+              <StatCard
+                icon={<Heart size={22} />}
+                title="HP"
+                value={`${formatNumber(player.hp)} / ${formatNumber(player.maxHp)}`}
+                text="current health"
+              />
+            </div>
+
+            <div className="grid-2">
+              <div className="page-card">
+                <h3>
+                  <Shield size={20} /> Identity
+                </h3>
+
+                <DetailRow label="Player ID" value={player.id} />
+                <DetailRow label="User ID" value={player.userId} />
+                <DetailRow label="Username" value={player.username} />
+                <DetailRow label="Rank" value={player.rank} />
+                <DetailRow label="Class" value={player.className || player.classId} />
+                <DetailRow label="World" value={player.worldName || player.world} />
+                <DetailRow label="Created" value={formatDate(player.createdAt)} />
+                <DetailRow label="Updated" value={formatDate(player.updatedAt)} />
+              </div>
+
+              <div className="page-card">
+                <h3>
+                  <BarChart3 size={20} /> Combat Stats
+                </h3>
+
+                <div className="pill-row">
+                  <StatPill label="ATK" value={player.attack} />
+                  <StatPill label="DEF" value={player.defense} />
+                  <StatPill label="HP" value={player.maxHp} />
+                  <StatPill label="Dodge" value={player.dodge} />
+                  <StatPill label="Crit" value={player.crit} />
+                  <StatPill label="Kills" value={player.monsterKills} />
+                  <StatPill label="Boss Damage" value={player.totalBossDamage || player.bossDamage} />
+                  <StatPill label="Retreats" value={player.retreats} />
+                </div>
+              </div>
+            </div>
+
+            <div className="page-card">
+              <h3>
+                <Package size={20} /> Equipment
+              </h3>
+
+              <div className="equipment-grid">
+                {["weapon", "helmet", "armor", "gloves", "pants", "boots"].map(
+                  (slot) => {
+                    const item = equipment?.[slot];
+
+                    return (
+                      <div className="equipment-slot" key={slot}>
+                        <span className="slot-label">{formatClass(slot)}</span>
+
+                        {item ? (
+                          <>
+                            <strong>{item.name || "Unknown Item"}</strong>
+                            <small>
+                              {item.quality || "Common"} • Lv.{" "}
+                              {formatNumber(item.requiredLevel)}
+                            </small>
+                            <small>{item.description || "No description"}</small>
+                          </>
+                        ) : (
+                          <>
+                            <strong>Empty</strong>
+                            <small>No item equipped</small>
+                          </>
+                        )}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            <div className="grid-2">
+              <div className="page-card">
+                <h3>
+                  <Backpack size={20} /> Inventory
+                </h3>
+
+                <p className="muted-text">
+                  Total items: {formatNumber(inventory.length)}
+                </p>
+
+                <div className="pill-row">
+                  {inventory.slice(0, 20).map((item) => (
+                    <span className="pill" key={item.key || item.id || item.name}>
+                      {item.name || "Unknown Item"} x{formatNumber(item.quantity)}
+                    </span>
+                  ))}
+
+                  {!inventory.length && <span className="pill">No inventory items</span>}
+
+                  {inventory.length > 20 && (
+                    <span className="pill">
+                      +{formatNumber(inventory.length - 20)} more
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="page-card">
+                <h3>
+                  <PawPrint size={20} /> Pets
+                </h3>
+
+                <p className="muted-text">Total pets: {formatNumber(pets.length)}</p>
+
+                <div className="pill-row">
+                  {pets.slice(0, 20).map((pet) => (
+                    <span className="pill" key={pet.key || pet.id || pet.name}>
+                      {pet.name || "Unknown Pet"} • Lv. {formatNumber(pet.level)}
+                    </span>
+                  ))}
+
+                  {!pets.length && <span className="pill">No pets found</span>}
+
+                  {pets.length > 20 && (
+                    <span className="pill">+{formatNumber(pets.length - 20)} more</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

@@ -1731,3 +1731,118 @@ code {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* =========================================================
+   ADMIN PLAYER INSPECTOR MODAL
+   Mobile-safe, scoped only to AdminPanel inspector.
+   ========================================================= */
+
+.admin-inspector-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(2, 6, 23, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+}
+
+.admin-inspector-modal {
+  width: min(1080px, 100%);
+  max-width: 100%;
+  max-height: 88vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  background:
+    radial-gradient(circle at top right, rgba(246, 198, 91, 0.12), transparent 30%),
+    rgba(15, 23, 42, 0.96);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.admin-inspector-modal h2,
+.admin-inspector-modal h3 {
+  margin-top: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-inspector-modal .page-card {
+  margin-top: 14px;
+}
+
+.admin-inspector-modal .grid-2 {
+  margin-top: 14px;
+}
+
+.admin-inspector-modal .secondaryBtn.smallBtn {
+  white-space: nowrap;
+}
+
+.admin-inspector-modal .pill {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.admin-inspector-modal .equipment-grid {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-inspector-modal .equipment-slot {
+  min-width: 0;
+}
+
+.admin-inspector-modal .equipment-slot strong,
+.admin-inspector-modal .equipment-slot small,
+.admin-inspector-modal .statRow strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  .admin-inspector-backdrop {
+    padding: 8px;
+    place-items: start center;
+  }
+
+  .admin-inspector-modal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .admin-inspector-modal .filter-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-inspector-modal .secondaryBtn.smallBtn {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .admin-inspector-modal .featureGrid,
+  .admin-inspector-modal .grid-2,
+  .admin-inspector-modal .equipment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-inspector-modal .statRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-inspector-modal .pill-row {
+    align-items: stretch;
+  }
+
+  .admin-inspector-modal .pill {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
