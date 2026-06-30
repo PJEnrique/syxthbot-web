@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Sword, Menu } from "lucide-react";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import {
+  API_URL,
+  consumeAuthTokenFromUrl,
+  getStoredAuthToken,
+  clearStoredAuthToken,
+} from "../api/api";
 
 async function fetchAuthStatus(signal) {
+  const token = getStoredAuthToken();
+
   const options = {
     credentials: "include",
     cache: "no-store",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   };
 
   if (signal) {
@@ -60,6 +67,8 @@ export default function Navbar() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
+    consumeAuthTokenFromUrl();
+
     const controller = new AbortController();
     let cancelled = false;
 
@@ -67,12 +76,10 @@ export default function Navbar() {
       fetchAuthStatus(signal)
         .then((result) => {
           if (cancelled) return;
-
           setUser(result.loggedIn ? result.user : null);
         })
         .catch((err) => {
           if (cancelled || err.name === "AbortError") return;
-
           setUser(null);
         })
         .finally(() => {
@@ -112,12 +119,16 @@ export default function Navbar() {
     try {
       setLoggingOut(true);
 
+      const token = getStoredAuthToken();
+
       await fetch(`${API_URL}/api/auth/logout`, {
         method: "POST",
         credentials: "include",
         cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
+      clearStoredAuthToken();
       setUser(null);
 
       localStorage.setItem("syxth-auth-event", String(Date.now()));
@@ -126,6 +137,8 @@ export default function Navbar() {
       window.location.replace("/");
     } catch (error) {
       console.error("Logout failed:", error);
+      clearStoredAuthToken();
+      setUser(null);
       setLoggingOut(false);
     }
   }
