@@ -15,7 +15,7 @@ import {
   Package,
 } from "lucide-react";
 import DiscordEmoji from "../components/DiscordEmoji";
-import { API_URL } from "../api/api";
+import { API_URL, getAuthHeaders } from "../api/api";
 
 const API_BASE = `${API_URL}/api`;
 
@@ -121,6 +121,8 @@ export default function Dashboard() {
 
       const res = await fetch(`${API_BASE}/player/me`, {
         credentials: "include",
+        cache: "no-store",
+        headers: getAuthHeaders(),
       });
 
       const data = await res.json();
@@ -148,6 +150,8 @@ export default function Dashboard() {
       try {
         const res = await fetch(`${API_BASE}/player/me`, {
           credentials: "include",
+          cache: "no-store",
+          headers: getAuthHeaders(),
           signal: controller.signal,
         });
 

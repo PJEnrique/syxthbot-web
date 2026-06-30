@@ -238,13 +238,15 @@ async function getPlayerStats() {
 }
 
 router.get("/me", requireAuth, requireAdmin, (req, res) => {
+  const user = req.user;
+
   return res.json({
     ok: true,
     admin: {
-      id: req.session.user.id,
-      username: req.session.user.username || "",
-      displayName: getDisplayName(req.session.user),
-      avatarUrl: req.session.user.avatarUrl || "",
+      id: user.id,
+      username: user.username || "",
+      displayName: getDisplayName(user),
+      avatarUrl: user.avatarUrl || "",
       access: req.adminAccess || null,
     },
   });

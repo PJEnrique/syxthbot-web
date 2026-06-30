@@ -9,7 +9,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import { API_URL, getAuthHeaders } from "../api/api";
 
 const typeFilters = [
   "All",
@@ -101,6 +101,7 @@ export default function ItemWiki() {
       const response = await fetch(`${API_URL}/api/items?t=${Date.now()}`, {
         credentials: "include",
         cache: "no-store",
+        headers: getAuthHeaders(),
       });
 
       const data = await readJsonResponse(response);
@@ -131,6 +132,7 @@ export default function ItemWiki() {
         const response = await fetch(`${API_URL}/api/items?t=${Date.now()}`, {
           credentials: "include",
           cache: "no-store",
+          headers: getAuthHeaders(),
         });
 
         const data = await readJsonResponse(response);

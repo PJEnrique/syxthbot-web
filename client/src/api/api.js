@@ -36,7 +36,7 @@ export function consumeAuthTokenFromUrl() {
   return token;
 }
 
-function getAuthHeaders(extraHeaders = {}) {
+export function getAuthHeaders(extraHeaders = {}) {
   const token = getStoredAuthToken();
 
   return {
@@ -95,6 +95,39 @@ export async function apiPost(path, body = {}) {
   return data;
 }
 
+export async function apiPatch(path, body = {}) {
+  const response = await fetch(`${API_URL}${normalizePath(path)}`, {
+    method: "PATCH",
+    credentials: "include",
+    cache: "no-store",
+    headers: getAuthHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(body),
+  });
+
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  return data;
+}
+
+export async function authFetch(pathOrUrl, options = {}) {
+  const url = String(pathOrUrl || "").startsWith("http")
+    ? pathOrUrl
+    : `${API_URL}${normalizePath(pathOrUrl)}`;
+
+  return fetch(url, {
+    credentials: "include",
+    cache: "no-store",
+    ...options,
+    headers: getAuthHeaders(options.headers || {}),
+  });
+}
+
 export function getDiscordLoginUrl() {
   return `${API_URL}/api/auth/discord`;
 }
@@ -102,7 +135,7 @@ export function getDiscordLoginUrl() {
 /*
   Mobile fallback:
   Some mobile browsers do not send the Render API session cookie
-  from syxthbot-web.onrender.com to syxthbot-api.onrender.com.
+  from syxthbot-web.onrender.com to syxth-api.onrender.com.
   This patch adds the mobile auth token automatically to API requests.
 */
 if (typeof window !== "undefined" && !window.__syxthFetchPatched) {

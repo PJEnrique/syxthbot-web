@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import { API_URL, getAuthHeaders } from "../api/api";
 
 const topPlayerTypes = [
   { id: "power", label: "Power" },
@@ -119,18 +119,22 @@ async function fetchAdminData(topType = "power") {
       fetch(`${API_URL}/api/admin/me?t=${Date.now()}`, {
         credentials: "include",
         cache: "no-store",
+        headers: getAuthHeaders(),
       }),
       fetch(`${API_URL}/api/admin/overview?t=${Date.now()}`, {
         credentials: "include",
         cache: "no-store",
+        headers: getAuthHeaders(),
       }),
       fetch(`${API_URL}/api/admin/recent-players?t=${Date.now()}`, {
         credentials: "include",
         cache: "no-store",
+        headers: getAuthHeaders(),
       }),
       fetch(`${API_URL}/api/admin/top-players?type=${topType}&t=${Date.now()}`, {
         credentials: "include",
         cache: "no-store",
+        headers: getAuthHeaders(),
       }),
     ]);
 
@@ -171,6 +175,7 @@ async function fetchTopPlayers(topType) {
     {
       credentials: "include",
       cache: "no-store",
+      headers: getAuthHeaders(),
     }
   );
 

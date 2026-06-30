@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import { API_URL, getAuthHeaders } from "../api/api";
 
 async function readJsonResponse(response) {
   const text = await response.text();
@@ -78,6 +78,7 @@ async function fetchTradeInventoryData() {
     {
       credentials: "include",
       cache: "no-store",
+      headers: getAuthHeaders(),
     }
   );
 
@@ -307,9 +308,9 @@ export default function TradeBoard() {
         method: "POST",
         credentials: "include",
         cache: "no-store",
-        headers: {
+        headers: getAuthHeaders({
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           inventoryItemKey: selectedItem.inventoryItemKey,
           askingGold: goldValue,
@@ -346,6 +347,7 @@ export default function TradeBoard() {
         method: "PATCH",
         credentials: "include",
         cache: "no-store",
+        headers: getAuthHeaders(),
       });
 
       const data = await readJsonResponse(response);

@@ -1,12 +1,10 @@
 const axios = require("axios");
+const authRoutes = require("../routes/authRoutes");
 
 const DISCORD_API = "https://discord.com/api/v10";
 
 function getAllowedRoleIds() {
-  const raw =
-    process.env.ADMIN_ROLE_IDS ||
-    process.env.ADMIN_ROLE_ID ||
-    "";
+  const raw = process.env.ADMIN_ROLE_IDS || process.env.ADMIN_ROLE_ID || "";
 
   return raw
     .split(",")
@@ -34,13 +32,20 @@ async function getGuildMember({ guildId, userId, botToken }) {
 
 async function requireAdmin(req, res, next) {
   try {
-    const userId = req.session?.user?.id;
+    const user = req.user || authRoutes.getAuthenticatedUser(req);
+    const userId = user?.id;
 
     if (!userId) {
       return res.status(401).json({
         ok: false,
         error: "You must be logged in.",
       });
+    }
+
+    req.user = user;
+
+    if (req.session) {
+      req.session.user = user;
     }
 
     const guildId = process.env.DISCORD_GUILD_ID;

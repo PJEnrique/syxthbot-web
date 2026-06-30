@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PawPrint, RefreshCw } from "lucide-react";
 import DiscordEmoji from "../components/DiscordEmoji";
-import { API_URL } from "../api/api";
+import { API_URL, getAuthHeaders } from "../api/api";
 
 const API_BASE = `${API_URL}/api`;
 
@@ -52,6 +52,8 @@ async function fetchPetDexData(signal) {
 async function fetchPlayerPetsData(signal) {
   const res = await fetch(`${API_BASE}/pets/me`, {
     credentials: "include",
+    cache: "no-store",
+    headers: getAuthHeaders(),
     signal,
   });
 

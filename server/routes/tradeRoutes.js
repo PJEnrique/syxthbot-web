@@ -388,7 +388,7 @@ router.get("/", async (req, res) => {
 
 router.get("/my-inventory", requireAuth, async (req, res) => {
   try {
-    const user = req.session.user;
+    const user = req.user;
     const playerRef = db.collection("players").doc(user.id);
     const playerDoc = await playerRef.get();
 
@@ -431,7 +431,7 @@ router.get("/my-inventory", requireAuth, async (req, res) => {
 
 router.post("/", requireAuth, async (req, res) => {
   try {
-    const user = req.session.user;
+    const user = req.user;
 
     const inventoryItemKey = normalizeText(req.body.inventoryItemKey);
     const askingGold = normalizeNumber(req.body.askingGold);
@@ -534,7 +534,7 @@ router.post("/", requireAuth, async (req, res) => {
 
 router.patch("/:id/cancel", requireAuth, async (req, res) => {
   try {
-    const user = req.session.user;
+    const user = req.user;
     const tradeId = normalizeText(req.params.id);
 
     if (!tradeId) {

@@ -66,7 +66,8 @@ router.get("/", async (req, res) => {
 
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const user = req.user;
+    const userId = user.id;
 
     const playerDoc = await db.collection("players").doc(userId).get();
 
@@ -77,7 +78,7 @@ router.get("/me", requireAuth, async (req, res) => {
       });
     }
 
-    const player = normalizePlayer(playerDoc.data(), req.session.user);
+    const player = normalizePlayer(playerDoc.data(), user);
 
     return res.json({
       ok: true,
