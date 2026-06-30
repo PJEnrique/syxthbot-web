@@ -1,98 +1,101 @@
 const express = require("express");
-const requireAuth = require("../middleware/requireAuth");
 const { db } = require("../firebase/firebase");
 
 const {
-  PET_DATA,
-  normalizePlayer,
-  normalizePet,
-  calculatePetStats,
-  getRequiredExp,
+  WORLDS,
+  BOSS_SCHEDULE,
+  BOSSES,
+  normalizeBoss,
 } = require("../game/syxthGameUtils");
 
 const router = express.Router();
 
-function getBasePetData() {
-  return PET_DATA.map((pet) => ({
-    ...pet,
-    emoji: pet.emoji || "🐾",
+function noStore(req, res, next) {
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+}
+
+async function getBossRanking(worldId, limit = 10) {
+  const snapshot = await db
+    .collection("worldBosses")
+    .doc(worldId)
+    .collection("damage")
+    .orderBy("damage", "desc")
+    .limit(limit)
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
   }));
 }
 
-function buildPetDex(playerPets = [], activePetId = null) {
-  const ownedPets = playerPets.map(normalizePet).filter(Boolean);
-
-  return getBasePetData().map((basePet) => {
-    const ownedCopies = ownedPets.filter(
-      (pet) => pet.basePetId === basePet.id || pet.id === basePet.id
-    );
-
-    const bestOwned = ownedCopies
-      .sort((a, b) => {
-        if (b.level !== a.level) return b.level - a.level;
-        return b.price - a.price;
-      })[0] || null;
-
-    return {
-      ...basePet,
-      owned: ownedCopies.length > 0,
-      ownedCount: ownedCopies.length,
-      active: bestOwned ? bestOwned.id === activePetId : false,
-      bestOwned: bestOwned
-        ? {
-            ...bestOwned,
-            calculatedStats: calculatePetStats(bestOwned),
-          }
-        : null,
-    };
-  });
-}
-
-router.get("/", async (req, res) => {
+router.get("/status", noStore, async (req, res) => {
   try {
-    return res.json({
-      ok: true,
-      pets: getBasePetData(),
-    });
-  } catch (error) {
-    console.error("PetDex error:", error);
+    const requestedWorldId = req.query.worldId
+      ? String(req.query.worldId)
+      : null;
 
-    return res.status(500).json({
-      ok: false,
-      error: "Failed to load pets.",
-    });
-  }
-});
+    const worlds = requestedWorldId
+      ? WORLDS.filter((world) => world.id === requestedWorldId)
+      : WORLDS;
 
-router.get("/me", requireAuth, async (req, res) => {
-  try {
-    const user = req.user;
-    const userId = user.id;
+    const bosses = [];
 
-    const playerDoc = await db.collection("players").doc(userId).get();
+    for (const world of worlds) {
+      const bossDoc = await db.collection("worldBosses").doc(world.id).get();
 
-    if (!playerDoc.exists) {
-      return res.status(404).json({
-        ok: false,
-        error: "No SYXTH player found for this Discord account.",
+      if (!bossDoc.exists) {
+        bosses.push({
+          worldId: world.id,
+          worldName: world.name,
+          active: false,
+          boss: null,
+          ranking: [],
+        });
+
+        continue;
+      }
+
+      const rawBoss = {
+        id: bossDoc.id,
+        ...bossDoc.data(),
+      };
+
+      const ranking = await getBossRanking(world.id);
+
+      const isActive =
+        String(rawBoss.status || "").toLowerCase() === "active" &&
+        Number(rawBoss.hp || 0) > 0;
+
+      bosses.push({
+        worldId: world.id,
+        worldName: world.name,
+        active: isActive,
+        boss: normalizeBoss(rawBoss, ranking),
+        ranking,
       });
     }
 
-    const player = normalizePlayer(playerDoc.data(), user);
-
     return res.json({
       ok: true,
-      pets: player.pets,
-      activePet: player.activePet,
-      activePetStats: player.activePetStats,
-      petdex: buildPetDex(player.pets, player.activePetId),
+      schedule: BOSS_SCHEDULE,
+      bossConfig: BOSSES,
+      worlds: WORLDS,
+      bosses,
+      updatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Player pets error:", error);
+    console.error("Boss status error:", error);
 
     return res.status(500).json({
       ok: false,
-      error: "Failed to load player pets.",
+      error: "Failed to load boss status.",
     });
   }
 });
