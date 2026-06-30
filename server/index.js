@@ -22,6 +22,11 @@ const SERVER_URL = process.env.SERVER_URL || "http://localhost:5000";
 const SESSION_COOKIE_NAME = "syxth.sid";
 const isProduction = process.env.NODE_ENV === "production";
 
+/*
+  Required for Render / proxy hosting.
+  This helps Express correctly detect HTTPS behind Render's proxy,
+  which is important for secure cookies on mobile browsers.
+*/
 app.set("trust proxy", 1);
 
 app.use(
@@ -65,9 +70,18 @@ app.use(
   session({
     name: SESSION_COOKIE_NAME,
     secret: process.env.SESSION_SECRET || "change-this-secret",
+
     resave: false,
     saveUninitialized: false,
     rolling: true,
+
+    /*
+      Important for production behind Render proxy.
+      Without this, secure cookies may fail after Discord OAuth,
+      especially on mobile.
+    */
+    proxy: true,
+
     cookie: {
       httpOnly: true,
       secure: isProduction,
@@ -101,6 +115,8 @@ app.get("/api/debug/env", (req, res) => {
     ok: true,
 
     nodeEnv: process.env.NODE_ENV || null,
+    isProduction,
+
     clientUrl: CLIENT_URL,
     serverUrl: SERVER_URL,
     discordRedirectUri: process.env.DISCORD_REDIRECT_URI || null,
@@ -112,7 +128,14 @@ app.get("/api/debug/env", (req, res) => {
       process.env.FIREBASE_SERVICE_ACCOUNT_JSON
     ),
 
+    sessionCookieName: SESSION_COOKIE_NAME,
+    sessionCookieSecure: isProduction,
+    sessionCookieSameSite: isProduction ? "none" : "lax",
+
     requestOrigin: req.headers.origin || null,
+    requestProtocol: req.protocol,
+    forwardedProto: req.headers["x-forwarded-proto"] || null,
+
     allowedOrigins,
   });
 });
