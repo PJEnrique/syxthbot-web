@@ -2055,16 +2055,3 @@ textarea {
     font-size: 13px;
   }
 }
-body::after {
-  content: "CSS FILE LOADED V5";
-  position: fixed;
-  left: 10px;
-  bottom: 10px;
-  z-index: 999999;
-  background: #f6c65b;
-  color: #111;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 800;
-}
