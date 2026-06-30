@@ -7,7 +7,7 @@ import {
   PlusCircle,
   XCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { API_URL, getAuthHeaders } from "../api/api";
 
@@ -125,6 +125,13 @@ export default function TradeBoard() {
   const [selectedInventoryItemKey, setSelectedInventoryItemKey] = useState("");
   const [askingGold, setAskingGold] = useState("");
   const [note, setNote] = useState("");
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewMode = searchParams.get("view") === "listings" ? "listings" : "post";
+
+  function switchView(nextView) {
+    setSearchParams(nextView === "listings" ? { view: "listings" } : {});
+  }
 
   const selectedItem = useMemo(() => {
     return (
@@ -328,6 +335,7 @@ export default function TradeBoard() {
       setAskingGold("");
       setNote("");
       setSuccess("Trade listing posted.");
+      switchView("listings");
 
       await Promise.allSettled([loadTradesOnly(), loadInventoryOnly()]);
     } catch (err) {
@@ -398,6 +406,40 @@ export default function TradeBoard() {
       </div>
 
       <div className="page-card">
+        <div className="filter-head">
+          <div>
+            <h2>Trade Board Actions</h2>
+            <p className="muted-text">
+              Create a listing, or open the active listed items page.
+            </p>
+          </div>
+
+          <div className="pill-row">
+            <button
+              type="button"
+              className={viewMode === "post" ? "primaryBtn" : "secondaryBtn smallBtn"}
+              onClick={() => switchView("post")}
+            >
+              <PlusCircle size={16} />
+              Post Item
+            </button>
+
+            <button
+              type="button"
+              className={
+                viewMode === "listings" ? "primaryBtn" : "secondaryBtn smallBtn"
+              }
+              onClick={() => switchView("listings")}
+            >
+              <Package size={16} />
+              Listed Items
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {viewMode === "post" && (
+        <div className="page-card">
         <div className="filter-head">
           <div>
             <h2>
@@ -524,8 +566,10 @@ export default function TradeBoard() {
           </button>
         </form>
       </div>
+      )}
 
-      <div className="page-card">
+      {viewMode === "listings" && (
+        <div className="page-card">
         <div className="filter-head">
           <div>
             <h2>
@@ -603,6 +647,7 @@ export default function TradeBoard() {
           </div>
         )}
       </div>
+      )}
     </section>
   );
 }
